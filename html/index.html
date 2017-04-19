@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Wechat</title>
+  <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcss.com/animate.css/3.2.5/animate.min.css" rel="stylesheet">
+  <style media="screen">
+
+    #content{
+      padding:20px;
+      padding-bottom:100px;
+      /*background:rgba(0, 0, 0, 0.1);*/
+      box-sizing: border-box;
+    }
+    #content>div>div{
+      display:inline-block;
+      max-width: 70%;
+    }
+    .self{
+      float:right;
+      position: relative;
+    }
+    .self .status{
+      position: absolute;
+      font-size:18px;
+      line-height: 30px;
+      text-align: center;
+      color:rgba(0, 0, 0, 0.5);
+      left:-35px;
+      top:50%;
+      margin-top:-25px;
+      width:30px;
+      height:30px;
+      border-radius: 50%;
+    }
+    .self .remove{
+      position: absolute;
+      font-size:14px;
+      line-height: 20px;
+      text-align: center;
+      background:rgba(0, 0, 0, 0.5);
+      color:#fff;
+      left:-10px;
+      top:0;
+      margin-top:-10px;
+      width:20px;
+      height:20px;
+      border-radius: 50%;
+      cursor: pointer;
+      opacity: 0;
+    }
+    .self:hover .remove{
+      opacity: 0.8;
+    }
+    .move{
+      animation-name: rotate;
+      animation-duration: 0.8s;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+    /*动画*/
+    @keyframes rotate {
+      0%{
+        transform: rotateZ(0);
+      }
+      100%{
+        transform: rotateZ(360deg);
+      }
+    }
+    .head{
+      background: #76D457;
+      color:#fff;
+      font-size: 20px;
+      font-weight: bold;
+      height: 50px;
+      line-height: 50px;
+      box-shadow: 0 0 10px #2F7717;
+    }
+
+    #setName{
+      cursor: pointer;
+      background:#5BA2C4;
+      outline: none;
+    }
+
+    .set-name-box{
+      position: absolute;
+      z-index: 99;
+      left:8000px;
+      padding-left: 25px;
+      padding-right: 35px;
+      /*display:none;*/
+    }
+    .set-name-box span{
+      cursor: pointer;
+      background: #18A15F;
+      font-weight: bold;
+      color:#fff;
+    }
+    .set-name-box span:hover{
+      background: #127C49;
+    }
+    #not-name-btn{
+      background: #E5796F;
+    }
+    #not-name-btn:hover{
+      background: #AF4238;
+    }
+    .send-to-list{
+      position: absolute;
+      z-index: 99;
+      top:5px;
+      right:100px;
+    }
+    .person-add{
+      cursor: pointer;
+      display: inline-block;
+      padding:2px 5px;
+      background: rgba(0, 0, 0, 0.2);
+      margin-right:5px;
+      border-radius:5px;
+    }
+  </style>
+</head>
+<body>
+<div class="head navbar-fixed text-center animated">
+  <span class="head-title"></span>
+  (<small class="num"></small>)
+</div>
+<div class="container">
+  <div id="content" class="row">
+
+  </div>
+  <div class="navbar-fixed-bottom row" style="bottom:10px;padding:20px;">
+    <div class="set-name-box">
+      <div class="input-group">
+        <span id="not-name-btn" class="input-group-addon">Not need</span>
+        <input id="name-input" type="text" class="form-control" placeholder="Set a amazing name,you have only once chance!">
+        <span id="set-name-btn" class="input-group-addon">Set name</span>
+      </div>
+    </div>
+    <div class="col-lg-12">
+      <div class="input-group">
+        <span class="input-group-btn">
+          <button id="setName" data-name="" type="button" class=" btn btn-info" data-container="body" data-toggle="popover" data-placement="top" data-content="点击，起一个响亮名字!">
+
+          </button>
+        </span>
+        <input id="input" type="text" class="form-control" placeholder="Say something....">
+        <span class="input-group-btn">
+          <button id="send" class="btn btn-success" type="button">Send</button>
+        </span>
+      </div>
+      <div class="send-to-list">
+
+      </div>
+    </div>
+  </div>
+</div>
+  <script src="http://cdn.bootcss.com/jquery/3.1.0/jquery.min.js"></script>
+  <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://cdn.bootcss.com/socket.io/1.7.3/socket.io.min.js"></script>
+  <script type="text/javascript">
+  $(function(){
+    var coo = "游客"+((new Date).getTime()+"").slice(-6);
+    var sock = "";
+    var myNum = 0;
+    var flagD = "";
+    var socket    = io();
+    var content   = "";
+    var container = $('#content');
+    var selfC = null,selfS = "";
+    var otherC = null,otherS = "";
+    var sendTo = [];
+    socket.on("disconnect",function(){
+      $('.head').css("background","gray");
+    });
+    socket.on("reconnect",function(){
+      $('.head').css("background","#76D457");
+    });
+    // socket.on("connect",function(){
+        $("#setName").text(coo);
+        var flag = 0;
+        $("#setName").click(function(){
+          if(!flag){
+            $('.set-name-box').animate({left:"10px"},"normal","swing").find('input').focus();
+          }
+        });
+        $("#not-name-btn").click(function(){
+            $('.set-name-box').animate({left:"8000px"},"normal","swing");
+        });
+        $("#set-name-btn").click(function(){
+          if($.trim($("#name-input").val())==""){
+            $("#name-input").focus();
+          }else{
+            flag = 1;
+            coo = $("#name-input").val();
+            $('#setName').attr("data-content","昵称只能设置一次!").text($("#name-input").val());
+            $("#not-name-btn").click();
+            $("#setName").attr("disabled",true);
+          }
+        });
+        $("#name-input").focus(function(){
+          $(document).on("keydown",function(e){
+            if(e.which===13){
+              $("#set-name-btn").click();
+            }
+          });
+        }).blur(function(){
+          $(document).off("keydown");
+        });
+        $("#input").focus(function(){
+          $(document).on("keydown",function(e){
+            if(e.which===13){
+              $("#send").click();
+            }
+          });
+        }).blur(function(){
+          $(document).off("keydown");
+        });
+        $("#send").click(function(){
+          $(this).attr("disabled",true);
+          content = $.trim($("#input").val());
+          if(content==""){
+            $("#input").focus();
+            $(this).attr("disabled",false);
+            return;
+          }
+          selfC = $('<div class="row" data-num="'+myNum+'">');
+          selfS = '<div class="self">'
+            +'<span class="status glyphicon glyphicon-refresh move"></span>'
+            +'<div class="panel panel-success">'
+                +'<div class="panel-heading text-right">'
+                  +content+"<b> : <a data-id='"+sock+"' href='javascript:void(0);'>"+coo+"</a></b>"
+                +'</div>'
+            +'</div>'
+            +'<span data-num="'+myNum+'" class="remove glyphicon glyphicon-remove"></span>'
+          +'</div>';
+          selfC.html(selfS);
+          container.append(selfC);
+          scroll();
+          if(sendTo.length==0){
+            content = "<b><a class='person' data-id='"+sock+"' href='javascript:void(0);'>"+coo+"</a>:</b>"+content;
+          }else{
+            content = "<b><a class='person' data-id='"+sock+"' href='javascript:void(0);'>"+coo+"</a><span style='color:red;'>(私信)</span>:</b>"+content;
+          }
+          $("#input").val("");
+          $(this).attr("disabled",false);
+          flagD = sock +""+ myNum;
+          socket.emit("mes",{content:content,send:sendTo,sockD:flagD},function(back){
+            if(back==1){
+              sendTo = [];
+              myNum++;
+              $('.send-to-list').empty();
+              setTimeout(function(){
+                selfC.find('.status').removeClass('glyphicon-refresh move').addClass('glyphicon-ok').css('color','#76D457');
+                setTimeout(function(){
+                  selfC.find('.status').remove();
+                },200);
+              },400);
+            }
+          });
+        });
+        socket.on("broad",function(data){
+          otherC = $('<div class="row" data-id="'+data.sockD+'">');
+          otherS = '<div>'
+            +'<div class="panel panel-info">'
+                +'<div class="panel-heading">'
+                  +data.content
+                +'</div>'
+            +'</div>'
+          +'</div>';
+          otherC.html(otherS);
+          container.append(otherC);
+          scroll();
+        });
+
+        socket.on("head",function(data){
+          sock = data.id;
+          $('.head-title').text(data.title).addClass("flipInX");
+        });
+        socket.on("number",function(data){
+          $('.num').text(data);
+        });
+        function scroll(){
+          var off = container.children("div:last-child").offset();
+          $(window).scrollTop(150+off.top-$(window).height());
+        }
+        $('#setName').hover(function(){
+          $(this).popover('show');
+        },function(){
+          $(this).popover('hide');
+        });
+        $("#content").on("click","a.person",function(){
+          if(sendTo.length>=5){
+            alert("您最多只能添加5个私信对象!");
+            return;
+          }
+          if(sendTo.indexOf($(this).data("id"))==-1){
+            sendTo.push($(this).data("id"));
+            $("<span>").html($(this).text()).addClass('person-add').attr("data-id",$(this).data("id")).appendTo($('.send-to-list'));
+          }else{
+            $('.send-to-list').children("span[data-id='"+$(this).data("id")+"']").text($(this).text());
+          }
+        });
+        $('.send-to-list').on("click",'span',function(){
+          sendTo.splice(sendTo.indexOf($(this).data('id')),1);
+          $(this).remove();
+          console.log(sendTo);
+        });
+        $('#content').on("click","span.remove",function(){
+          var This = $(this);
+          socket.emit('delete',sock+$(this).data("num"),function(flag){
+            if(flag==1){
+              This.parent().parent().remove();
+            }else{
+              console.log("删除失败");
+            }
+          });
+        });
+        socket.on('del',function(data){
+          $("#content").children("div[data-id='"+data+"']").remove();
+        });
+      // });
+  });
+  </script>
+</body>
+</html>
